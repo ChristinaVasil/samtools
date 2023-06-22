@@ -1,6 +1,18 @@
+#!/usr/bin/env nextflow
+
+// enable dsl2
+nextflow.enable.dsl = 2
+
+params.results = '/home/christina/'
+
+params.ref = '/home/christina/reference/Oryzias_latipes.ASM223467v1.dna.toplevel.fa'
+
+params.inputdir = '/mnt/codon/christina/cram_files/*.cram'
+
 process samtools {
-    cpus 8
+   
     memory '60.GB'
+    publishDir "${params.results}/fastq_nextflow_test/", mode: 'copy'
     label 'samtools'
 
     input:
@@ -10,15 +22,17 @@ process samtools {
       path "*.R1.fastq.gz", emit: R1fastq
       path "*.R2.fastq.gz", emit: R2fastq
       
-
-    """
-    samtools fastq --reference !{params.ref}  -1 !{cram.basename}.R1.fastq.gz -2 !{cram.basename}.R2.fastq.gz !{cram} \;
-    """
+    shell:
+    '''
+    samtools fastq --reference !{params.ref}  -1 !{cram.baseName}.R1.fastq.gz -2 !{cram.baseName}.R2.fastq.gz !{cram}
+    '''
 }
 
 workflow {
     Channel
-      .fromPath("*.cram", checkIfExists: true) | samtools(fastq.out.R1fastq,fastq.out.R2fastq)
-    
+      .fromPath(params.inputdir, checkIfExists: true)
+      .set{ ch_cram }
+   
+   samtools(ch_cram)   
     
 }
